@@ -66,3 +66,19 @@ turdbug@wtf:~/stuffnjunk$ ./panalyzer.py ~/wordlists/Top95Thousand-probable.txt 
 ?u?s?s?u?s?u?s?s?u?s
 
 '''
+
+## Use the mask file with Haschat!
+
+1. lets generate a mask from your favorite password list.
+
+'''
+$ ./panalyzer.py ~/wordlists/password.lst -m --min 6 --max 10 -l 6 > ~/mymask.hcmask
+
+'''
+
+2. Fire up hashcat for a mask attack.
+'''
+$ hashcat -m 1000 --potfile-path dang_b.pot -a 3 hashes.txt ~/mymask.hcmask
+'''
+
+3. Enjoy passwords :) 
