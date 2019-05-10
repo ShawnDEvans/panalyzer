@@ -104,22 +104,7 @@ class Matrix(dict):
                 mask[rank+1] = [ self.char_to_mask(char) for char, freq in row ]
                 print('{}'.format(''.join(mask[rank+1]))) 
             #final[length] = mask
-                
-    '''
-        output = set()
-        if len(list(self.result.keys())) > 0:
-            for length in list(self.result.keys()):
-                for row in self.result[length]:
-                    mask = ''
-                    #if 0 not in [j for i,j in row ]:  
-                    for values in row:
-                        mask += self.char_to_mask(values[0])
-                    output.add(mask)
-        my_list = list(output)
-        my_list.sort( key = len )
-        for item in my_list:
-            print(item) 
-    '''   
+  
 
     def keyspace(self):
         ''' 
