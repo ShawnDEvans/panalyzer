@@ -2,7 +2,7 @@
 
 Let's analyze some password dumps! This is a password list character frequency analyzer that can output hashcat masks. I started this for kicks, and decided to share.
 
-## Useage:
+## Usage:
 
 '''
 usage: panalyzer [-h] [-c] [-m] [-k] [-r] [--min MIN] [--max MAX] [-l LIMIT]
