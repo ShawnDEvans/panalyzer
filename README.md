@@ -1,6 +1,6 @@
 # Panalyzer
 
-Let's analyze some password dumps! This is a password list character frequency analyzer that can output hashcat masks. I started this for kicks, and decided to share.
+Let's analyze some password dumps! This is a character frequency analyzer that outputs hashcat masks and intersting frequency statistics using a password list as input. I started this for kicks, and decided to share. It's not yet complete. Threading doesn't really work yet thanks to GIL, and the keyspace feature isn't functinal yet either. The keyspace will (eventually) be used to generate custom hashcat char sets (of which hashcat supports 4) based on frequency...but not quite there yet.   
 
 ## Usage:
 
@@ -24,11 +24,12 @@ optional arguments:
   --max MAX             Maximum string length to process, default 20
   -l LIMIT, --limit LIMIT
                         Limit frequency summaries to the top N results
-  -v, --verbose         Increase output verbosity
+  -v, --verbose         Increase output verbosity, -vv (very verbose)
   -t THREADS, --threads THREADS
                         Number of threads to analyze theinput, default 1
 
 Panalyzer v1- Shawn Evans - sevans@nopsec.com
+
 ```
 
 ## Output exmpale:
