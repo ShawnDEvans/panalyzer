@@ -35,8 +35,7 @@ def main():
             elif args.mask:
                 analyzer.mask()
             elif args.keyspace:
-                #currently broken feature
-                #analyzer.keyspace()
+                analyzer.keyspace()
                 pass
             elif args.rank:
                 analyzer.show_rank()

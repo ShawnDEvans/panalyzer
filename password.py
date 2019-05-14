@@ -7,6 +7,7 @@ import time
 import operator
 import os
 import re
+from functools import reduce
 
 class CharClass(dict):
     def __init__(self, pass_length, password=None):
@@ -99,7 +100,7 @@ class Matrix(dict):
             mask = {}
             for rank, row in enumerate(self.result[length]):
                 #print('[*] Rank {}: {}'.format(rank+1, row))
-                mask[rank] = [ self.char_to_mask(char) for freq, char in row ]
+                mask[rank] = [ self.char_to_mask(char) for freq, char, prob in row ]
                 mymask = ''.join(mask[rank])
                 final.append(mymask)
        
@@ -111,15 +112,35 @@ class Matrix(dict):
         This doesn't work atm...
         '''
         output = {}
-        if len(list(self.result.keys())) > 0:
-            for length in list(self.result.keys()):
-                for row in self.result[length]:
-                    pos = 1
-                    if 0 not in [j for i,j in row ]:
-                        for values in row:
-                            charset.add(values[0])
-                            output[pos] = charset
-                            pos += 1 
+        if len(self.result.keys()) > 0:
+            for length in self.result.keys():
+                keyspace = []
+                for rank, row in enumerate(self.result[length]):
+                    keyspace.append( [ char for freq, char, prob in row ] )
+                output[length] = set(reduce(operator.concat, keyspace))
+        
+        for length in output.keys():
+            print('Keyspace for length: {}'.format(length))
+            cust_lower = []
+            cust_upper = []
+            cust_digit = []
+            cust_spec = []
+            for item in output[length]:
+                val_type = self.char_to_mask(item)
+                if val_type == '?l':
+                    cust_lower.append(item)
+                elif val_type == '?u':
+                    cust_upper.append(item)
+                elif val_type == '?d':
+                    cust_digit.append(item)
+                else:
+                    cust_spec.append(item)
+            print('Lower: {}'.format(''.join(cust_lower)))
+            print('Upper: {}'.format(''.join(cust_upper)))
+            print('Digit: {}'.format(''.join(cust_digit)))
+            print('Special: {}'.format(''.join(cust_spec)))
+
+                    
      
     def csv(self):
         import csv
