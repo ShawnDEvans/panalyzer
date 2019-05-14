@@ -1,4 +1,4 @@
-#! /usr/bin/env
+#! /usr/bin/env python3
 import concurrent.futures
 import threading
 import logging
@@ -10,10 +10,13 @@ import re
 
 class CharClass(dict):
     def __init__(self, pass_length, password=None):
+        '''
+        Generates a character class dictionary to keep track of character frequency.
+        '''
         if password:
-            ascii_set = [ ord(item) for item in list(set(password)) ]
+            ascii_set = [ ord(item) for item in list(password.strip()) ]
         else:
-            ascii_set = list(range(32, 127))
+            ascii_set = range(32, 127)
         chars = [ chr(x) for x in ascii_set ] 
         char_class = { c: [0] * pass_length for c in chars }
         self.update(char_class)
@@ -21,11 +24,11 @@ class CharClass(dict):
 class Matrix(dict):
      
     def __init__(self, min_len=5, max_len=20, infile=None, verbose=False, threads=1):
-        logFormat = '%(message)s - %(asctime)s - %(levelname)s'
+        logFormat = '[*] %(message)s' 
         if verbose == 1:
             logging.basicConfig(format=logFormat, level=logging.INFO)
         elif verbose == 2:
-            logging.basicConfig(format=logFormat, level=logging.DEBUG)
+            logging.basicConfig(format=logFormat+' - %(asctime)s', level=logging.DEBUG)
         else:
             logging.basicConfig()
     
@@ -51,7 +54,7 @@ class Matrix(dict):
             except Exception as e:
                 logging.error('[!] Something went wrong with the threads...{}'.format(e) )
                 pass
-            logging.info('[+] Processed passwords from {} in: {}'.format(os.path.basename(infile.name), time.time() - start))
+            logging.info('Processed passwords from {} in: {}'.format(os.path.basename(infile.name), time.time() - start))
 
     def process(self, password):
         password = password.strip()
@@ -72,39 +75,35 @@ class Matrix(dict):
         top_freq = 0
         freq = 0
         
-        for pwlength in list(self.keys()):
-            ranked_values = [] 
-            row[pwlength] = [ [('',0)] * pwlength for x in range(slots) ] 
-            processed_values[pwlength] = [''] * pwlength
-            for rank in range(0, slots):
-                for position in range(0, pwlength):
-                    top_char = ''
-                    for char in list(self[pwlength].keys()):
-                        if (self[pwlength][char][position] >= freq) and ( char not in processed_values[pwlength] and (char not in ranked_values)):
-                            logging.debug('Length: {} -> Rank: {} -> Current char: {} at Frequency: {} processed chars for position {}: {}'.format(pwlength, rank+1, char, freq, position, processed_values[pwlength]))
-                            freq = self[pwlength][char][position]
-                            top_char = char
-                    processed_values[pwlength][position] = top_char
-                    logging.debug('Length: {} -> Processed {} at position {} for rank {}'.format(pwlength, top_char, position, rank+1))
-                    row[pwlength][rank][position] = (top_char, freq)
-                    freq = 0
-                ranked_values += processed_values[pwlength]
-                logging.debug('Length: {} Current row for rank {}: {}'.format(pwlength, rank+1, row[pwlength][rank]))
-                logging.debug('Length: {} Rank: {} Currently ranked values: {}'.format(pwlength, rank+1, ranked_values))
-                logging.debug('Length {} completed: {}'.format(pwlength, row[pwlength]))
-        self.result = row
-        return row 
+        for pwlength in self.keys():
+            processed_values[pwlength] = [] 
+            for position in range(pwlength):
+                row = [ (freq, char) for freq, char in zip( [ self[pwlength][key][position] for key in self[pwlength].keys() ], self[pwlength].keys() ) ]
+                processed_values[pwlength].append(sorted(row)[::-1])
+        
+        for pwlength in processed_values.keys():
+            self.result[pwlength] = []
+            logging.info('Summary for length: {}'.format(pwlength))
+            for rank in range(slots):
+                row = [ processed_values[pwlength][position][rank] for position in range(pwlength) ]
+                logging.info('{}. {}'.format(rank+1, row)) 
+                self.result[pwlength].append(row)
+         
+        return True 
      
     def mask(self):
-        #final = {}
+        final = [] 
+        mymask = ''
         for length in list(self.result.keys()):
             mask = {}
             for rank, row in enumerate(self.result[length]):
                 #print('[*] Rank {}: {}'.format(rank+1, row))
-                mask[rank+1] = [ self.char_to_mask(char) for char, freq in row ]
-                print('{}'.format(''.join(mask[rank+1]))) 
-            #final[length] = mask
-  
+                mask[rank] = [ self.char_to_mask(char) for freq, char in row ]
+                mymask = ''.join(mask[rank])
+                final.append(mymask)
+       
+        for bam in sorted(set(final), key=len):
+            print(bam) 
 
     def keyspace(self):
         ''' 
@@ -125,19 +124,14 @@ class Matrix(dict):
         import csv
         import io
         if len(list(self.result.keys())) > 0:
-            header = [ 'Length', 'Rank', 'Position', 'Char', 'Freq', 'Mask' ]
+            header = [ 'Length', 'Rank', 'Position', 'Char', 'Freq' ]
             output= io.StringIO()
             wr = csv.writer(output, delimiter=',', quoting=csv.QUOTE_ALL)
             wr.writerow( header )
             for length in list(self.result.keys()):
-                rank = 1
-                for row in self.result[length]:
-                    pos = 1
-                    vals = ''
-                    for values in row:
-                        wr.writerow( [ length, rank, pos, values[0], values[1], self.char_to_mask(values[0]) ] )
-                        pos += 1
-                    rank += 1
+                for rank, row in enumerate(self.result[length]):
+                    for pos, values in enumerate(row):
+                        wr.writerow( [ length, rank+1, pos+1, values[1], values[0] ] )
             contents = output.getvalue()
             print(contents)
 
@@ -151,10 +145,10 @@ class Matrix(dict):
 
     def show_rank(self):
         rank = 1
-        for length in list(self.result.keys()):
+        for length in self.result.keys():
             print('[*] Character frequency analysis completed for length: {}, Passwords: {}'.format(length, self.stats[length])) 
             for row in self.result[length]:
-                print('[*] Rank {}: {}'.format(rank, row))
+                print('[*] {}. {}'.format(rank, row))
                 rank += 1
             rank = 1 
 
