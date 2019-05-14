@@ -74,16 +74,17 @@ class Matrix(dict):
         processed_values = {}
         top_freq = 0
         freq = 0
-        
+        total = sum( [ self.stats[item] for item in list(self.stats.keys()) ] )
+     
         for pwlength in self.keys():
             processed_values[pwlength] = [] 
             for position in range(pwlength):
-                row = [ (freq, char) for freq, char in zip( [ self[pwlength][key][position] for key in self[pwlength].keys() ], self[pwlength].keys() ) ]
+                row = [ (freq, char, round(freq/total, 4) ) for freq, char in zip( [ self[pwlength][key][position] for key in self[pwlength].keys() ], self[pwlength].keys() ) ]
                 processed_values[pwlength].append(sorted(row)[::-1])
         
         for pwlength in processed_values.keys():
             self.result[pwlength] = []
-            logging.info('Summary for length: {}'.format(pwlength))
+            logging.info('Summary for length: {} ({}%)'.format(pwlength, round((self.stats[pwlength]/total)*100,2) ) )
             for rank in range(slots):
                 row = [ processed_values[pwlength][position][rank] for position in range(pwlength) ]
                 logging.info('{}. {}'.format(rank+1, row)) 
@@ -145,10 +146,12 @@ class Matrix(dict):
 
     def show_rank(self):
         rank = 1
+        total = sum( [ self.stats[item] for item in list(self.stats.keys()) ] )
+        
         for length in self.result.keys():
-            print('[*] Character frequency analysis completed for length: {}, Passwords: {}'.format(length, self.stats[length])) 
+            print('[*] Character frequency analysis completed for length: {}, Passwords: {} ({}%)'.format(length, self.stats[length], round((self.stats[length]/total)*100, 2))) 
             for row in self.result[length]:
-                print('[*] {}. {}'.format(rank, row))
+                print('[*] {}. {}'.format(rank, [ (freq, char) for freq,char,prob in row]))
                 rank += 1
             rank = 1 
 
