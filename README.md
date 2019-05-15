@@ -78,7 +78,7 @@ abcdehiklmnoprstuwy,ABCDFJKMNPRSTW,0123456789,!#$*@,?2?1?1?1?1?1?3?1?1?4
 ```
 
 ## Password frequency stats:
-'''
+```
 $ ./panalyzer.py --min 7 --max 10 -l 5 ~/wordlists/password.lst -r
 [*] Character frequency analysis completed for length: 7, Passwords: 606 (43.22%)
 [*] 1. [(65, 's'), (110, 'a'), (64, 'n'), (60, 't'), (81, 'i'), (106, 'e'), (74, 'e')]
@@ -105,7 +105,7 @@ $ ./panalyzer.py --min 7 --max 10 -l 5 ~/wordlists/password.lst -r
 [*] 4. [(4, 'A'), (8, 'e'), (7, 'i'), (5, 's'), (5, 'a'), (5, 'a'), (6, 'e'), (5, '2'), (5, '5'), (4, '8')]
 [*] 5. [(3, 'p'), (5, 'h'), (6, 'v'), (4, 'r'), (5, '2'), (5, '2'), (4, 'n'), (4, 'r'), (5, '4'), (4, '7')]
 
-'''
+```
 
 ## Use a mask file or custom charset with Haschat
 
