@@ -107,7 +107,7 @@ $ ./panalyzer.py --min 7 --max 10 -l 5 ~/wordlists/password.lst -r
 
 ```
 
-## Use a mask file or custom charset with Haschat
+## Use a mask file or custom charset with Haschat:
 
 1. lets generate a mask from your favorite password list.
 
