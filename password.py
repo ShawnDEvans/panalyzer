@@ -36,6 +36,7 @@ class Matrix(dict):
         self.result = {}
         pass_matrix = {}
         self.stats = {}
+        self.mymask = [] 
  
         for val in range(min_len, max_len+1):
             pass_matrix[val] = CharClass(val)
@@ -93,7 +94,7 @@ class Matrix(dict):
          
         return True 
      
-    def mask(self):
+    def mask(self, cust=False):
         final = [] 
         mymask = ''
         for length in list(self.result.keys()):
@@ -103,9 +104,13 @@ class Matrix(dict):
                 mask[rank] = [ self.char_to_mask(char) for freq, char, prob in row ]
                 mymask = ''.join(mask[rank])
                 final.append(mymask)
-       
-        for bam in sorted(set(final), key=len):
-            print(bam) 
+        uniq_mask = sorted(set(final), key=len)
+
+        if not cust:
+            for bam in sorted(set(final), key=len):
+                print(bam)
+
+        self.mymask = uniq_mask 
 
     def keyspace(self):
         ''' 
@@ -117,10 +122,11 @@ class Matrix(dict):
                 keyspace = []
                 for rank, row in enumerate(self.result[length]):
                     keyspace.append( [ char for freq, char, prob in row ] )
-                output[length] = set(reduce(operator.concat, keyspace))
+                output[length] = sorted(set(reduce(operator.concat, keyspace)))
         
+        self.mask(True)
+        cust_def = {} 
         for length in output.keys():
-            print('Keyspace for length: {}'.format(length))
             cust_lower = []
             cust_upper = []
             cust_digit = []
@@ -135,13 +141,12 @@ class Matrix(dict):
                     cust_digit.append(item)
                 else:
                     cust_spec.append(item)
-            print('Lower: {}'.format(''.join(cust_lower)))
-            print('Upper: {}'.format(''.join(cust_upper)))
-            print('Digit: {}'.format(''.join(cust_digit)))
-            print('Special: {}'.format(''.join(cust_spec)))
+            cust_def[length] = '{},{},{},{}'.format(''.join(cust_lower), ''.join(cust_upper), ''.join(cust_digit), ''.join(cust_spec)) 
 
-                    
-     
+        for mask in self.mymask:
+            cust_mask = mask.replace('l','1').replace('u','2').replace('d','3').replace('s','4')
+            print('{},{}'.format( cust_def[len(mask)/2], cust_mask)) 
+
     def csv(self):
         import csv
         import io
