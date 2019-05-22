@@ -86,12 +86,15 @@ class Matrix(dict):
         
         for pwlength in processed_values.keys():
             self.result[pwlength] = []
-            logging.info('Summary for length: {} ({}%)'.format(pwlength, round((self.stats[pwlength]/total)*100,2) ) )
-            for rank in range(slots):
-                row = [ processed_values[pwlength][position][rank] for position in range(pwlength) ]
-                logging.info('{}. {}'.format(rank+1, row)) 
-                self.result[pwlength].append(row)
-         
+            try: 
+                logging.info('Summary for length: {} ({}%)'.format(pwlength, round((self.stats[pwlength]/total)*100,2) ) )
+                for rank in range(slots):
+                    row = [ processed_values[pwlength][position][rank] for position in range(pwlength) ]
+                    logging.info('{}. {}'.format(rank+1, row)) 
+                    self.result[pwlength].append(row)
+            except Exception as e:
+                continue
+ 
         return True 
      
     def mask(self, cust=False):
@@ -175,11 +178,14 @@ class Matrix(dict):
         total = sum( [ self.stats[item] for item in list(self.stats.keys()) ] )
         
         for length in self.result.keys():
-            print('[*] Character frequency analysis completed for length: {}, Passwords: {} ({}%)'.format(length, self.stats[length], round((self.stats[length]/total)*100, 2))) 
-            for row in self.result[length]:
-                print('[*] {}. {}'.format(rank, [ (freq, char) for freq,char,prob in row]))
-                rank += 1
-            rank = 1 
+            try:
+                print('[*] Character frequency analysis completed for length: {}, Passwords: {} ({}%)'.format(length, self.stats[length], round((self.stats[length]/total)*100, 2))) 
+                for row in self.result[length]:
+                    print('[*] {}. {}'.format(rank, [ (freq, char) for freq,char,prob in row]))
+                    rank += 1
+                rank = 1
+            except:
+                continue
 
     def char_to_mask(self, char):
         upper = '[A-Z]'

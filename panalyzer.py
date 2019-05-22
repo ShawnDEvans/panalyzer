@@ -20,7 +20,7 @@ def main():
     parser.add_argument('-k', '--keyspace', help='Output the keyspace of the password file',action='store_true')
     parser.add_argument('-r', '--rank', help='Output character frequency data', action='store_true')
     parser.add_argument('--min', type=int, help='Minimum string length to process, default  %(default)s', default=6)
-    parser.add_argument('--max', type=int, help='Maximum string length to process, default  %(default)s', default=20)
+    parser.add_argument('--max', type=int, help='Maximum string length to process, default  %(default)s', default=12)
     parser.add_argument('-l', '--limit', type=int, help='Limit frequency summaries to the top N results', default=15)
     parser.add_argument('-v', '--verbose', help='Increase output verbosity, -vv (very verbose)', action='count', default=0)
     parser.add_argument('-t', '--threads', help='Number of threads to analyze theinput, default %(default)s', default=1)
