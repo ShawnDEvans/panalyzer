@@ -18,30 +18,30 @@ class CharClass(dict):
             ascii_set = [ ord(item) for item in list(password.strip()) ]
         else:
             ascii_set = range(32, 127)
-        chars = [ chr(x) for x in ascii_set ] 
+        chars = [ chr(x) for x in ascii_set ]
         char_class = { c: [0] * pass_length for c in chars }
         self.update(char_class)
 
 class Matrix(dict):
-     
+
     def __init__(self, min_len=5, max_len=20, infile=None, verbose=False, threads=1):
-        logFormat = '[*] %(message)s' 
+        logFormat = '[*] %(message)s'
         if verbose == 1:
             logging.basicConfig(format=logFormat, level=logging.INFO)
         elif verbose == 2:
             logging.basicConfig(format=logFormat+' - %(asctime)s', level=logging.DEBUG)
         else:
             logging.basicConfig()
-    
+
         self.result = {}
         pass_matrix = {}
         self.stats = {}
-        self.mymask = [] 
- 
+        self.mymask = []
+
         for val in range(min_len, max_len+1):
             pass_matrix[val] = CharClass(val)
         self.update(pass_matrix)
-        
+
         if infile:
             passwords = infile.readlines()
             try:
@@ -49,7 +49,7 @@ class Matrix(dict):
                     start = time.time()
                     processed_raw = executor.map(self.process, passwords)
                 infile.close()
-                 
+
             except IOError as e:
                 logging.error('[!] Invalid or missing input file...')
                 sys.exit()
@@ -62,7 +62,7 @@ class Matrix(dict):
         password = password.strip()
         pass_len = len(password)
         entry = {}
-        entry[pass_len] = CharClass(pass_len, password) 
+        entry[pass_len] = CharClass(pass_len, password)
         try:
             for position, char in enumerate(password):
                 self[pass_len][char][position] += 1
@@ -77,28 +77,28 @@ class Matrix(dict):
         top_freq = 0
         freq = 0
         total = sum( [ self.stats[item] for item in list(self.stats.keys()) ] )
-     
+
         for pwlength in self.keys():
-            processed_values[pwlength] = [] 
+            processed_values[pwlength] = []
             for position in range(pwlength):
                 row = [ (freq, char, round(freq/total, 4) ) for freq, char in zip( [ self[pwlength][key][position] for key in self[pwlength].keys() ], self[pwlength].keys() ) ]
                 processed_values[pwlength].append(sorted(row)[::-1])
-        
+
         for pwlength in processed_values.keys():
             self.result[pwlength] = []
-            try: 
+            try:
                 logging.info('Summary for length: {} ({}%)'.format(pwlength, round((self.stats[pwlength]/total)*100,2) ) )
                 for rank in range(slots):
                     row = [ processed_values[pwlength][position][rank] for position in range(pwlength) ]
-                    logging.info('{}. {}'.format(rank+1, row)) 
+                    logging.info('{}. {}'.format(rank+1, row))
                     self.result[pwlength].append(row)
             except Exception as e:
                 continue
- 
-        return True 
-     
+
+        return True
+
     def mask(self, cust=False):
-        final = [] 
+        final = []
         mymask = ''
         for length in list(self.result.keys()):
             mask = {}
@@ -113,10 +113,10 @@ class Matrix(dict):
             for bam in sorted(set(final), key=len):
                 print(bam)
 
-        self.mymask = uniq_mask 
+        self.mymask = uniq_mask
 
     def keyspace(self):
-        ''' 
+        '''
         This doesn't work atm...
         '''
         output = {}
@@ -125,10 +125,11 @@ class Matrix(dict):
                 keyspace = []
                 for rank, row in enumerate(self.result[length]):
                     keyspace.append( [ char for freq, char, prob in row ] )
-                output[length] = sorted(set(reduce(operator.concat, keyspace)))
-        
+                if len(keyspace) > 0:
+                    output[length] = sorted(set(reduce(operator.concat, keyspace)))
+
         self.mask(True)
-        cust_def = {} 
+        cust_def = {}
         for length in output.keys():
             cust_lower = []
             cust_upper = []
@@ -144,11 +145,11 @@ class Matrix(dict):
                     cust_digit.append(item)
                 else:
                     cust_spec.append(item)
-            cust_def[length] = '{},{},{},{}'.format(''.join(cust_lower), ''.join(cust_upper), ''.join(cust_digit), ''.join(cust_spec)) 
+            cust_def[length] = '{},{},{},{}'.format(''.join(cust_lower), ''.join(cust_upper), ''.join(cust_digit), ''.join(cust_spec))
 
         for mask in self.mymask:
             cust_mask = mask.replace('l','1').replace('u','2').replace('d','3').replace('s','4')
-            print('{},{}'.format( cust_def[len(mask)/2], cust_mask)) 
+            print('{},{}'.format( cust_def[len(mask)/2], cust_mask))
 
     def csv(self):
         import csv
@@ -176,10 +177,10 @@ class Matrix(dict):
     def show_rank(self):
         rank = 1
         total = sum( [ self.stats[item] for item in list(self.stats.keys()) ] )
-        
+
         for length in self.result.keys():
             try:
-                print('[*] Character frequency analysis completed for length: {}, Passwords: {} ({}%)'.format(length, self.stats[length], round((self.stats[length]/total)*100, 2))) 
+                print('[*] Character frequency analysis completed for length: {}, Passwords: {} ({}%)'.format(length, self.stats[length], round((self.stats[length]/total)*100, 2)))
                 for row in self.result[length]:
                     print('[*] {}. {}'.format(rank, [ (freq, char) for freq,char,prob in row]))
                     rank += 1
@@ -191,14 +192,15 @@ class Matrix(dict):
         upper = '[A-Z]'
         lower = '[a-z]'
         digit = '[0-9]'
-        special = '[\  \!\"\#\$\%\&\'\(\)\*\+\,\-\.\/\:\;\<\=\>\?\@\[\]\^_\`\{\|\}\~]'
+        #special = r'[\ \!\"\#\$\%\&\'\(\)\*\+\,\-\.\/\:\;\<\=\>\?\@\[\]\^_\`\{\|\}\~]'
+        special = r"[ !\"#$%&'()*+,\-./:;<=>?@[\]^_`{|}~]"
         if re.search(upper, char):
             return '?u'
         elif re.search(lower, char):
             return '?l'
-        elif re.search(digit, char): 
+        elif re.search(digit, char):
             return '?d'
-        elif re.search(special, char): 
+        elif re.search(special, char):
             return '?s'
         else:
             return '?a'
