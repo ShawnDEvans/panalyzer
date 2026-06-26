@@ -29,54 +29,82 @@ class Matrix(dict):
             start = time.time()
             total = 0
 
-            # Read entire file as binary data
+            try:
+                import psutil
+                avail_mem = psutil.virtual_memory().available
+            except ImportError:
+                avail_mem = 1024 * 1024 * 1024
+                if os.path.exists('/proc/meminfo'):
+                    try:
+                        with open('/proc/meminfo', 'r') as f:
+                            for line in f:
+                                if 'MemAvailable' in line:
+                                    avail_mem = int(line.split()[1]) * 1024
+                                    break
+                    except Exception:
+                        pass
+
+            chunk_size = min(1024 * 1024 * 1024, max(16 * 1024 * 1024, avail_mem // 6))
+            logging.info(f"Target chunk size: {chunk_size / (1024*1024):.2f} MB")
+
+            remainder = b""
+
             with open(infile.name, 'rb') as f:
-                data = f.read()
+                while True:
+                    block = f.read(chunk_size)
+                    if not block and not remainder:
+                        break
 
-            # Map file into a 1D NumPy byte array
-            arr = np.frombuffer(data, dtype=np.uint8)
-            nl = np.flatnonzero(arr == 10)  # Find all newline positions (ASCII 10)
+                    if remainder:
+                        block = remainder + block
+                        remainder = b""
 
-            total_lines = len(nl) + 1
-            logging.info(f"Loaded {total_lines} lines as bytes")
+                    if len(block) >= chunk_size:
+                        last_nl = block.rfind(b'\n')
+                        if last_nl != -1:
+                            remainder = block[last_nl + 1:]
+                            block = block[:last_nl + 1]
+                        else:
+                            remainder = block
+                            continue
 
-            # Vectorized calculation of start and end indices of every line
-            starts = np.zeros(total_lines, dtype=np.int64)
-            starts[1:] = nl + 1
+                    if not block:
+                        continue
 
-            ends = np.empty(total_lines, dtype=np.int64)
-            ends[:-1] = nl
-            ends[-1] = len(arr)
+                    arr = np.frombuffer(block, dtype=np.uint8)
+                    nl = np.flatnonzero(arr == 10)
 
-            lengths = ends - starts
+                    if len(nl) == 0:
+                        continue
 
-            # Process group by length completely vectorized
-            for length in range(min_len, max_len + 1):
-                mask = (lengths == length)
-                L_starts = starts[mask]
-                num_lines = len(L_starts)
+                    total_lines = len(nl)
+                    starts = np.zeros(total_lines, dtype=np.int64)
+                    starts[1:] = nl[:-1] + 1
+                    ends = nl
+                    lengths = ends - starts
 
-                if num_lines == 0:
-                    continue
+                    for length in range(min_len, max_len + 1):
+                        mask = (lengths == length)
+                        L_starts = starts[mask]
+                        num_lines = len(L_starts)
 
-                self.stats[length] = num_lines
-                total += num_lines
+                        if num_lines == 0:
+                            continue
 
-                matrix = self.pass_matrix[length]
+                        self.stats[length] = self.stats.get(length, 0) + num_lines
+                        total += num_lines
 
-                # Column-by-column global extraction and character binning
-                for position in range(length):
-                    column_data = arr[L_starts + position]
-                    counts = np.bincount(column_data, minlength=128)[:128]
-
-                    # ignore control chars (<32) and DEL (127)
-                    counts[:32] = 0
-                    counts[127] = 0
-                    matrix.data[position, :] = counts
+                        matrix = self.pass_matrix[length]
+                        for position in range(length):
+                            column_data = arr[L_starts + position]
+                            counts = np.bincount(column_data, minlength=128)[:128]
+                            counts[:32] = 0
+                            counts[127] = 0
+                            matrix.data[position, :] += counts
 
             self._vectorization_used = True
             elapsed = time.time() - start
-            logging.info(f"VECTORIZED: {total} passwords in {elapsed:.2f}s")
+            logging.info(f"VECTORIZED: {total} passwords processed in {elapsed:.2f}s")
 
     def _get_top_k(self, row, k=5):
         total = int(row.sum())
@@ -113,7 +141,8 @@ class Matrix(dict):
 
         return True
 
-    def mask(self, cust=False):
+    # 🔄 Refactored mask generator to map directly to file output structures or stream stdout
+    def mask(self, out_file='stdout', cust=False):
         if not self.result:
             self.summary()
         final_masks = []
@@ -136,13 +165,31 @@ class Matrix(dict):
                     final_masks.append((length, "".join(mask_chars)))
         uniq_mask_list = sorted(set(m[1] for m in final_masks), key=len)
         self.mymask = uniq_mask_list
+
         if not cust:
-            print("\n".join(uniq_mask_list))
+            if out_file == 'stdout':
+                if uniq_mask_list:
+                    print("\n".join(uniq_mask_list))
+            else:
+                try:
+                    with open(out_file, 'w', encoding='utf-8') as f:
+                        for m in uniq_mask_list:
+                            f.write(m + '\n')
+                    print(f"[*] Standard mask configuration written successfully to: {out_file}")
+                except Exception as e:
+                    logging.error(f"Failed writing mask configuration directly to file system: {e}")
+                    print("[!] Falling back to standard stdout pipeline loop:")
+                    if uniq_mask_list:
+                        print("\n".join(uniq_mask_list))
         return uniq_mask_list
 
-    def keyspace(self):
+    def keyspace(self, out_file='stdout'):
         if not self.result:
             self.summary()
+
+        mask_map = {'?l': '?1', '?u': '?2', '?d': '?3', '?s': '?4'}
+        output_lines = []
+
         for length in sorted(self.result.keys()):
             pos_data_list = self.result[length]
             if not pos_data_list or not pos_data_list[0]:
@@ -161,10 +208,10 @@ class Matrix(dict):
             c_digit = [c for c in all_chars if self.char_to_mask(c) == '?d']
             c_spec  = [c for c in all_chars if c not in c_lower + c_upper + c_digit]
             charset_def = '{},{},{},{}'.format(
-                ''.join(sorted(c_lower)),
-                ''.join(sorted(c_upper)),
-                ''.join(sorted(c_digit)),
-                ''.join(sorted(c_spec))
+                ''.join(sorted(c_lower)) if c_lower else ' ',
+                ''.join(sorted(c_upper)) if c_upper else ' ',
+                ''.join(sorted(c_digit)) if c_digit else ' ',
+                ''.join(sorted(c_spec)) if c_spec else ' '
             )
 
             for rank_idx in range(max_ranks):
@@ -173,12 +220,28 @@ class Matrix(dict):
                 for pos_data in pos_data_list:
                     if rank_idx < len(pos_data):
                         _, char, _ = pos_data[rank_idx]
-                        mask_chars.append(self.char_to_mask(char))
+                        standard_mask = self.char_to_mask(char)
+                        mask_chars.append(mask_map.get(standard_mask, '?4'))
                     else:
                         valid_rank = False
                         break
                 if valid_rank:
-                    print(f"{charset_def},{"".join(mask_chars)}")
+                    output_lines.append(f"{charset_def},{"".join(mask_chars)}")
+
+        if out_file == 'stdout':
+            for line in output_lines:
+                print(line)
+        else:
+            try:
+                with open(out_file, 'w', encoding='utf-8') as f:
+                    for line in output_lines:
+                        f.write(line + '\n')
+                print(f"[*] Keyspace rules written successfully to: {out_file}")
+            except Exception as e:
+                logging.error(f"Failed writing configuration data directly to file system: {e}")
+                print("[!] Falling back to standard stdout pipeline loop:")
+                for line in output_lines:
+                    print(line)
 
     def csv(self):
         import csv, io
