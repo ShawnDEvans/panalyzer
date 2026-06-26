@@ -141,7 +141,6 @@ class Matrix(dict):
 
         return True
 
-    # 🔄 Refactored mask generator to map directly to file output structures or stream stdout
     def mask(self, out_file='stdout', cust=False):
         if not self.result:
             self.summary()
@@ -243,18 +242,36 @@ class Matrix(dict):
                 for line in output_lines:
                     print(line)
 
-    def csv(self):
+    # 🔄 Refactored CSV generator to support robust direct file dumping
+    def csv(self, out_file='stdout'):
         import csv, io
         if not self.result:
             self.summary()
-        output = io.StringIO()
-        writer = csv.writer(output, delimiter=',', quoting=csv.QUOTE_ALL)
-        writer.writerow(['Length', 'Rank', 'Position', 'Char', 'Freq'])
+
+        rows = [['Length', 'Rank', 'Position', 'Char', 'Freq']]
         for length in sorted(self.result.keys()):
             for pos_idx, pos_data in enumerate(self.result[length]):
                 for rank_idx, (freq, char, _) in enumerate(pos_data):
-                    writer.writerow([length, rank_idx + 1, pos_idx + 1, char, freq])
-        print(output.getvalue())
+                    rows.append([length, rank_idx + 1, pos_idx + 1, char, freq])
+
+        if out_file == 'stdout':
+            output = io.StringIO()
+            writer = csv.writer(output, delimiter=',', quoting=csv.QUOTE_ALL)
+            writer.writerows(rows)
+            print(output.getvalue(), end='')
+        else:
+            try:
+                with open(out_file, 'w', encoding='utf-8', newline='') as f:
+                    writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
+                    writer.writerows(rows)
+                print(f"[*] CSV analysis written successfully to: {out_file}")
+            except Exception as e:
+                logging.error(f"Failed writing CSV metrics data directly to file system: {e}")
+                print("[!] Falling back to standard stdout pipeline output:")
+                output = io.StringIO()
+                writer = csv.writer(output, delimiter=',', quoting=csv.QUOTE_ALL)
+                writer.writerows(rows)
+                print(output.getvalue(), end='')
 
     def to_string(self):
         total = sum(self.stats.values()) if self.stats else 0

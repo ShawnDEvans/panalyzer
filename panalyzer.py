@@ -16,7 +16,7 @@ def main():
 
     parser = argparse.ArgumentParser(prog='panalyzer', description='Panalyzer - Lets analyze some passwords!', epilog='Panalyzer v1- Shawn Evans - sevans@nopsec.com')
     parser.add_argument('passfile', help='Password file to be processed.')
-    parser.add_argument('-c', '--csv', help='Output as CSV', action='store_true')
+    parser.add_argument('-c', '--csv', nargs='?', const='stdout', default=None, help='Output as CSV to a specified file, or stdout if no file is specified.')
     parser.add_argument('-m', '--mask', nargs='?', const='stdout', default=None, help='Generate hashcat mask based on character frequency and write to a specified file, or stdout if no file is specified.')
     parser.add_argument('-k', '--keyspace', nargs='?', const='stdout', default=None, help='Output the keyspace of the password file to a specified file, or stdout if no file is specified.')
     parser.add_argument('-r', '--rank', help='Output character frequency data', action='store_true')
@@ -42,7 +42,7 @@ def main():
             analyzer.summary(args.limit)
 
             if args.csv:
-                analyzer.csv()
+                analyzer.csv(out_file=args.csv)
             elif args.mask:
                 analyzer.mask(out_file=args.mask)
             elif args.keyspace:
@@ -56,6 +56,7 @@ def main():
         logging.exception('[!] General analyzer failure...{}'.format(e))
 
     total_time = time.time() - start_time
+    # 📊 Routed cleanly through info logging to avoid pollution of standard data streams
     logging.info(f"Total execution time: {total_time:.2f} seconds")
 
 if __name__ == "__main__":
