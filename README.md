@@ -1,12 +1,12 @@
 # Panalyzer
 
-Let's analyze some password dumps! This is a character frequency analyzer that outputs hashcat masks and intersting frequency statistics using a password list as input. I started this for kicks, and decided to share. It's not yet complete and performance could be a bit better, but the output appears accurate - so I've got that going for me. 
+Panalyzer is a handy character frequency analyzer that outputs hashcat masks and intersting frequency statistics using a password list as input. I started this for kicks, and decided to share. The shift to Numpy slices really improved performnce. Is it useful? Who knows. But, it is neat to see password topology trends over a domain.
 
 ## Usage:
 
 ```
-usage: panalyzer [-h] [-c] [-m] [-k] [-r] [--min MIN] [--max MAX] [-l LIMIT]
-                 [-v] [-t THREADS]
+usage: panalyzer [-h] [-c] [-m [MASK]] [-k [KEYSPACE]] [-r] [--min MIN]
+                 [--max MAX] [-l LIMIT] [-v]
                  passfile
 
 Panalyzer - Lets analyze some passwords!
@@ -14,21 +14,22 @@ Panalyzer - Lets analyze some passwords!
 positional arguments:
   passfile              Password file to be processed.
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -c, --csv             Output as CSV
-  -m, --mask            Generate hashcat mask based on character frequency
-  -k, --keyspace        Output the keyspace of the password file
+  -m, --mask [MASK]     Generate hashcat mask based on character frequency and
+                        write to a specified file, or stdout if no file is
+                        specified.
+  -k, --keyspace [KEYSPACE]
+                        Output the keyspace of the password file to a
+                        specified file, or stdout if no file is specified.
   -r, --rank            Output character frequency data
   --min MIN             Minimum string length to process, default 6
-  --max MAX             Maximum string length to process, default 20
-  -l LIMIT, --limit LIMIT
-                        Limit frequency summaries to the top N results
+  --max MAX             Maximum string length to process, default 12
+  -l, --limit LIMIT     Limit frequency summaries to the top N results
   -v, --verbose         Increase output verbosity, -vv (very verbose)
-  -t THREADS, --threads THREADS
-                        Number of threads to analyze theinput, default 1
 
-Panalyzer v1- Shawn Evans - sevans@nopsec.com
+Panalyzer v1.0 - Shawn Evans - shawndevans@gmail.com
 
 ```
 
