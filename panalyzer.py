@@ -11,8 +11,9 @@ def analyze(passlist):
     pass
 
 def main():
-    start = time.time()
-    
+    start_time = time.time()
+    overall_start = time.time()
+
     parser = argparse.ArgumentParser(prog='panalyzer', description='Panalyzer - Lets analyze some passwords!', epilog='Panalyzer v1- Shawn Evans - sevans@nopsec.com')
     parser.add_argument('passfile', help='Password file to be processed.')
     parser.add_argument('-c', '--csv', help='Output as CSV', action='store_true')
@@ -23,28 +24,38 @@ def main():
     parser.add_argument('--max', type=int, help='Maximum string length to process, default  %(default)s', default=12)
     parser.add_argument('-l', '--limit', type=int, help='Limit frequency summaries to the top N results', default=15)
     parser.add_argument('-v', '--verbose', help='Increase output verbosity, -vv (very verbose)', action='count', default=0)
-    parser.add_argument('-t', '--threads', help='Number of threads to analyze theinput, default %(default)s', default=1)
     args = parser.parse_args()
-    
-    with open(args.passfile, encoding='utf-8', errors='ignore') as infile:
-        analyzer = password.Matrix(args.min, args.max, infile, args.verbose, args.threads)
-        analyzer.summary(args.limit)
-        try:
+
+    logging.basicConfig(
+        format='[%(levelname)s] %(message)s',
+        level=logging.ERROR if not args.verbose else (logging.DEBUG if args.verbose > 1 else logging.INFO)
+    )
+
+    try:
+        with open(args.passfile, encoding='utf-8', errors='ignore') as infile:
+            analyzer = password.Matrix(args.min, args.max, infile, args.verbose)
+
+            data_collection_time = time.time() - overall_start
+            logging.info(f"Data collection took: {data_collection_time:.2f} seconds")
+
+            analyzer.summary(args.limit)
+
             if args.csv:
                 analyzer.csv()
             elif args.mask:
                 analyzer.mask()
             elif args.keyspace:
                 analyzer.keyspace()
-                pass
             elif args.rank:
                 analyzer.show_rank()
             else:
                 analyzer.to_string()
-            end = time.time()
-        except Exception as e:
-            logging.exception('[!] General analyzer failure...{}'.format(e))
 
-        
+    except Exception as e:
+        logging.exception('[!] General analyzer failure...{}'.format(e))
+
+    total_time = time.time() - start_time
+    logging.info(f"Total execution time: {total_time:.2f} seconds")
+
 if __name__ == "__main__":
-    main() 
+    main()
